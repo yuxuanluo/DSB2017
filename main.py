@@ -24,7 +24,7 @@ skip_prep = config_submit['skip_preprocessing']
 skip_detect = config_submit['skip_detect']
 
 if not skip_prep:
-    testsplit = full_prep(datapath,prep_result_path,
+    testsplit = full_prep(datapath, prep_result_path,
                           n_worker = config_submit['n_worker_preprocessing'],
                           use_existing=config_submit['use_exsiting_preprocessing'])
 else:
@@ -53,12 +53,9 @@ if not skip_detect:
 
     dataset = DataBowl3Detector(testsplit,config1,phase='test',split_comber=split_comber)
     test_loader = DataLoader(dataset,batch_size = 1,
-        shuffle = False,num_workers = 32,pin_memory=False,collate_fn =collate)
+        shuffle = False,num_workers = 2,pin_memory=False,collate_fn =collate)
 
     test_detect(test_loader, nod_net, get_pbb, bbox_result_path,config1,n_gpu=config_submit['n_gpu'])
-
-    
-
 
 casemodel = import_module(config_submit['classifier_model'].split('.py')[0])
 casenet = casemodel.CaseNet(topk=5)
@@ -91,9 +88,13 @@ def test_casenet(model,testset):
 
         coord = Variable(coord).cuda()
         x = Variable(x).cuda()
-        nodulePred,casePred,_ = model(x,coord)
+
+        # nodulePred: last-layer features of top 5 nodule candidates
+        # casePred: final slide classification
+        nodulePred, casePred, _ = model(x, coord)
         predlist.append(casePred.data.cpu().numpy())
         #print([i,data_loader.dataset.split[i,1],casePred.data.cpu().numpy()])
+
     predlist = np.concatenate(predlist)
     return predlist    
 config2['bboxpath'] = bbox_result_path
